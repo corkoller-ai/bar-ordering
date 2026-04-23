@@ -218,7 +218,7 @@ const[fTab,setFTab]=useState("value");const[ipP,setIpP]=useState("");const[ipC,s
 const[eSup,setESup]=useState(null);const[sF,setSF]=useState({});
 const[toastData,setToastData]=useState(null);const[sView,setSView]=useState(null);const[copied,setCopied]=useState("");
 
-const load=useCallback(async()=>{const d=await dbL();if(d.products){const mp=migrate(d.products);const ls=(d.snaps||d.snapshots||[]);setP(ls.length?mp:seedStocks(mp,HIST_SNAPS[HIST_SNAPS.length-1]));}if(d.suppliers)setSup(d.suppliers);const loadedSnaps=d.snaps||d.snapshots||[];setSnaps(loadedSnaps.length?loadedSnaps:HIST_SNAPS);if(d.dels||d.deliveries)setDels(d.dels||d.deliveries||[]);if(d.act||d.activity)setAct(d.act||d.activity||[]);if(d.recipes)setRecipes(d.recipes);setLoaded(true);},[]);
+const load=useCallback(async()=>{const d=await dbL();const mp=d.products?migrate(d.products):INIT;const hasStock=mp.some(p=>p.barStock>0||p.storStock>0);setP(hasStock?mp:seedStocks(mp,HIST_SNAPS[HIST_SNAPS.length-1]));if(d.suppliers)setSup(d.suppliers);const dbSnaps=(d.snaps||d.snapshots||[]).filter(s=>s.items?.some(i=>mp.find(p=>p.id===i.id&&p.barPos<999)));setSnaps([...HIST_SNAPS,...dbSnaps.filter(s=>!HIST_SNAPS.find(h=>h.id===s.id))]);if(d.dels||d.deliveries)setDels(d.dels||d.deliveries||[]);if(d.act||d.activity)setAct(d.act||d.activity||[]);if(d.recipes)setRecipes(d.recipes);setLoaded(true);},[]);
 useEffect(()=>{if(auth)load();},[auth,load]);
 const sv=useCallback(async(ov={})=>{setSaving(true);await dbS({products:P,suppliers:sup,snaps,dels,act,recipes,ts:new Date().toISOString(),...ov});setSaving(false);},[P,sup,snaps,dels,act,recipes]);
 const addAct=(type,detail)=>{const na=[...act,{id:Date.now(),date:new Date().toISOString(),type,detail}];setAct(na);return na;};
