@@ -195,7 +195,6 @@ function getSt(p){const t=(p.barStock||0)+(p.storStock||0);if(p.ron==="d")return
 const R=n=>Math.round(n*100)/100;
 async function dbL(){try{const{data:d}=await supabase.from("app_state").select("data").eq("id","main").single();return d?.data||{};}catch(e){return{};}}
 async function dbS(s){try{await supabase.from("app_state").upsert({id:"main",data:s,updated_at:new Date().toISOString()});}catch(e){console.error(e);}}
-function migrate(old){if(!old||!old.length)return INIT;const res=INIT.map(def=>{const o=old.find(p=>p.name===def.name);if(o)return{...def,notes:o.notes||""};return def;});old.forEach(o=>{if(!res.find(r=>r.name===o.name)){res.push({...o,barPos:o.barPos||999,storCat:o.storCat||o.cat,rat:o.rat??-1,ron:o.ron||"t"});}});return res;}
 function seedStocks(prods,snap){if(!snap||!snap.items)return prods;return prods.map(p=>{const si=snap.items.find(i=>i.id===p.id);if(si)return{...p,barStock:si.bar,storStock:si.stor};return p;});}
 
 function SS({items,value,onChange,ph}){const[o,setO]=useState(false);const[q,setQ]=useState("");const ref=useRef();const sel=items.find(i=>String(i.id)===String(value));const f=q?items.filter(i=>i.lb.toLowerCase().includes(q.toLowerCase())):items;useEffect(()=>{const h=e=>{if(ref.current&&!ref.current.contains(e.target))setO(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
@@ -218,9 +217,9 @@ const[fTab,setFTab]=useState("value");const[ipP,setIpP]=useState("");const[ipC,s
 const[eSup,setESup]=useState(null);const[sF,setSF]=useState({});
 const[toastData,setToastData]=useState(null);const[sView,setSView]=useState(null);const[copied,setCopied]=useState("");
 
-const load=useCallback(async()=>{const d=await dbL();const mp=d.products?migrate(d.products):INIT;if(d.suppliers)setSup(d.suppliers);const newSnaps=(d.snaps||[]).filter(s=>new Date(s.date)>new Date("2026-04-22"));const allSnaps=[...HIST_SNAPS,...newSnaps];setSnaps(allSnaps);const latest=allSnaps[allSnaps.length-1];setP(seedStocks(mp,latest));if(d.dels||d.deliveries)setDels(d.dels||d.deliveries||[]);if(d.act||d.activity)setAct(d.act||d.activity||[]);if(d.recipes)setRecipes(d.recipes);setLoaded(true);},[]);
+const load=useCallback(async()=>{const d=await dbL();if(d.v==="clean"){setP(d.products||INIT);if(d.suppliers)setSup(d.suppliers);setSnaps(d.snaps||HIST_SNAPS);setDels(d.dels||[]);setAct(d.act||[]);if(d.recipes)setRecipes(d.recipes);}else{const fresh=seedStocks([...INIT],HIST_SNAPS[HIST_SNAPS.length-1]);setP(fresh);setSnaps([...HIST_SNAPS]);await dbS({v:"clean",products:fresh,suppliers:DSUP,snaps:HIST_SNAPS,dels:[],act:[],recipes:[],ts:new Date().toISOString()});}setLoaded(true);},[]);
 useEffect(()=>{if(auth)load();},[auth,load]);
-const sv=useCallback(async(ov={})=>{setSaving(true);await dbS({products:P,suppliers:sup,snaps,dels,act,recipes,ts:new Date().toISOString(),...ov});setSaving(false);},[P,sup,snaps,dels,act,recipes]);
+const sv=useCallback(async(ov={})=>{setSaving(true);await dbS({v:"clean",products:P,suppliers:sup,snaps,dels,act,recipes,ts:new Date().toISOString(),...ov});setSaving(false);},[P,sup,snaps,dels,act,recipes]);
 const addAct=(type,detail)=>{const na=[...act,{id:Date.now(),date:new Date().toISOString(),type,detail}];setAct(na);return na;};
 
 const setCV=(loc,pid,val)=>setCData(p=>({...p,[loc]:{...p[loc],[parseInt(pid)]:val}}));
