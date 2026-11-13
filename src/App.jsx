@@ -263,7 +263,7 @@ const NBV=["Supplies","Food","CO2"];
 const DCFG={pp:10,ct:0.2};
 function pkSz(p){if(p.unit!=="btl"&&p.unit!=="can")return 0;const s=(p.size||"").toLowerCase();let m=s.match(/(\d+)\s*[\/x]\s*(\d+)\s*pk/);if(m)return m[1]*m[2];m=s.match(/(\d+)\s*pk/);if(m)return+m[1];m=s.match(/case of (\d+)/);if(m)return+m[1];m=s.match(/(\d+)\s*x\s*[\d.]+\s*oz/);if(m)return+m[1];return 0;}
 function csMap(dels){const m={};dels.forEach(d=>(d.items||[]).forEach(i=>{if(i.isCase&&i.perCase>=4)m[i.id]=i.perCase;}));return m;}
-function csHit(g,list){const a=Math.abs(g);for(const c of list){if(!(c>=4))continue;const n=Math.round(a/c);if(n>=1&&Math.abs(a-n*c)<=0.15*n*c)return{n,c};}return null;}
+function csHit(g,list){const a=Math.abs(g),l=list.filter(c=>c>=4).sort((x,y)=>x-y);if(!l.length)return null;return a>=0.85*l[0]-1e-9?{c:l[0],l}:null;}
 function wkList(snaps){const s=SRT(snaps);const o=[];for(let i=1;i<s.length;i++){const a=s[i-1],b=s[i],f=BD(a.date),e=BD(b.date);o.push({k:a.id+"_"+b.id,a,b,f,e,l:DAD(e,-1),ok:f<e});}return o;}
 const WL=w=>w.ok?FD(w.f)+" – "+FD(w.l):"No sales days · "+FD(LD(w.b.date));
 function wkCalc(w,P,dels,rpt,tmap,cfg,cm){const rc={},rl={};dels.forEach(d=>{const x=LD(d.date);if(x<w.f||x>=w.e)return;(d.items||[]).forEach(i=>{const q=i.total||i.qty||0;if(!q)return;rc[i.id]=(rc[i.id]||0)+q;(rl[i.id]=rl[i.id]||[]).push({d:x,s:d.supplier,q});});});
@@ -275,7 +275,7 @@ const po=PCATS.includes(p.cat),ct=po?cfg.ct:0;
 if(used<-ct-1e-9){r.why="Stock rose "+R(-used)+" with no delivery logged";cst(sold,r.cost);est++;o.fix.push(r);return;}
 if(!rpt)return;
 const tol=po?ct+(r.gap>0?cfg.pp/100*sold:0):0;r.tol=R(tol);const ps=pkSz(p),cl=ps?[ps]:cm[p.id]?[cm[p.id]]:po&&p.unit==="btl"?[12,6]:[];const h=Math.abs(r.gap)>tol+1e-9?csHit(r.gap,cl):null;
-if(h){r.why="Gap of "+R(Math.abs(r.gap))+" is about "+h.n+" case"+(h.n>1?"s":"")+" of "+h.c+" — check deliveries and counts";cst(sold,r.cost);est++;o.fix.push(r);return;}
+if(h){r.why="Gap of "+R(Math.abs(r.gap))+" is a full case or more ("+(h.l.length>1?"cases of "+h.l.join(" or "):"case of "+h.c)+") — check deliveries and counts";cst(sold,r.cost);est++;o.fix.push(r);return;}
 cst(used,r.cost);tot+=r.d$;if(po&&r.cost){uC+=used*r.cost;sC+=sold*r.cost;pa+=cfg.pp/100*sold*r.cost;cq+=Math.pow(cfg.ct*r.cost,2);}
 const inb=po&&Math.abs(r.gap)<=tol+1e-9;
 if(!r.cost){(inb||(!po&&Math.abs(r.gap)<3)?o.okr:o.nc).push(r);return;}
